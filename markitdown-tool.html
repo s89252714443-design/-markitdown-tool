@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MarkItDown — генератор команды</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #F7F6F3;
+    --surface:  #FFFFFF;
+    --surface2: #F0EEE9;
+    --border:   #E2DED7;
+    --border-s: #C8C3BA;
+    --text:     #1A1917;
+    --muted:    #7A766F;
+    --accent:   #2563EB;
+    --accent-bg:#EFF4FF;
+    --green:    #3B6D11;
+    --green-bg: #EAF3DE;
+    --orange:   #C2470A;
+    --orange-bg:#FEF0E7;
+    --mono:     'Menlo', 'Consolas', 'Monaco', monospace;
+    --sans:     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius:   8px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:       #1A1917;
+      --surface:  #242320;
+      --surface2: #2C2B28;
+      --border:   #38352F;
+      --border-s: #514D45;
+      --text:     #F0EDE8;
+      --muted:    #8A857D;
+      --accent:   #60A5FA;
+      --accent-bg:#1E2D45;
+      --green:    #97C459;
+      --green-bg: #1A2B0A;
+      --orange:   #F0997B;
+      --orange-bg:#2D1A0D;
+    }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    width: 100%;
+    max-width: 640px;
+    margin-bottom: 2rem;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--text);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-icon svg { display: block; }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .main {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filename-row {
+    display: flex;
+    align-items: stretch;
+  }
+
+  .filename-row input {
+    flex: 1;
+    height: 40px;
+    border: 1px solid var(--border-s);
+    border-right: none;
+    border-radius: var(--radius) 0 0 var(--radius);
+    padding: 0 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .filename-row input:focus {
+    border-color: var(--accent);
+  }
+
+  .filename-row input::placeholder {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .ext-pill {
+    height: 40px;
+    padding: 0 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border-s);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    min-width: 60px;
+    justify-content: center;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .formats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: 8px;
+  }
+
+  .fmt {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 10px 8px 9px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.12s, background 0.12s;
+    user-select: none;
+  }
+
+  .fmt:hover { border-color: var(--border-s); }
+
+  .fmt.active {
+    border: 2px solid var(--accent);
+    background: var(--accent-bg);
+  }
+
+  .fmt-emoji { font-size: 22px; display: block; margin-bottom: 5px; line-height: 1; }
+  .fmt-name  { font-size: 12px; font-weight: 500; color: var(--text); display: block; }
+  .fmt-ext   { font-size: 11px; color: var(--muted); font-family: var(--mono); display: block; margin-top: 2px; }
+  .fmt.active .fmt-name { color: var(--accent); }
+
+  .output-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .lock-icon {
+    flex-shrink: 0;
+    color: var(--muted);
+  }
+
+  .static-path {
+    flex: 1;
+    height: 40px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .result-card {
+    background: #111210;
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .result-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid #2A2A28;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .terminal-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+  }
+
+  .dot-r { background: #FF5F57; }
+  .dot-y { background: #FEBC2E; }
+  .dot-g { background: #28C840; }
+
+  .result-label {
+    font-size: 12px;
+    color: #666;
+    margin-left: auto;
+    font-family: var(--mono);
+  }
+
+  .result-body {
+    padding: 1.25rem 1.25rem 1rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+  }
+
+  .cmd-line {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.9;
+    word-break: break-all;
+    color: #CCC;
+  }
+
+  .p-cmd  { color: #60A5FA; }
+  .p-path { color: #888; }
+  .p-file { color: #86EFAC; }
+  .p-ext  { color: #4ADE80; font-weight: 600; }
+  .p-flag { color: #FCA5A5; }
+  .p-out  { color: #FCD34D; }
+  .p-empty{ color: #555; font-style: italic; }
+
+  .copy-btn {
+    width: calc(100% - 2.5rem);
+    margin: 0 1.25rem 1.25rem;
+    height: 38px;
+    background: transparent;
+    border: 1px solid #3A3A38;
+    border-radius: var(--radius);
+    color: #AAA;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .copy-btn:hover { border-color: #555; color: #DDD; background: #1E1E1C; }
+  .copy-btn.ok    { border-color: #28C840 !important; color: #28C840 !important; }
+
+  @media (max-width: 480px) {
+    .formats-grid { grid-template-columns: repeat(3, 1fr); }
+    .static-path  { font-size: 11px; }
+    .cmd-line     { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <rect x="3" y="2" width="10" height="13" rx="1.5" stroke="white" stroke-width="1.5"/>
+        <path d="M7 16h8a1.5 1.5 0 001.5-1.5V5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6 7h4M6 10h6M6 13h3" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>MarkItDown</h1>
+  </div>
+  <p class="subtitle">Генератор команды для конвертации файлов в Markdown</p>
+</header>
+
+<div class="main">
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="step-label">
+      <div class="step-num">1</div>
+      <div class="step-title">Имя файла на рабочем столе</div>
+    </div>
+    <div class="filename-row">
+      <input type="text" id="fname" placeholder="Доп._соглашение_3_от_01.07.25_1" oninput="render()" autocomplete="off" />
+      <div class="ext-pill" id="ext-pill">.pdf</div>
+    </div>
+    <p class="hint">Только имя — без расширения и без пути. Файл должен лежать на рабочем столе.</p>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="step-label">
+      <div class="step-num">2</div>
+      <div class="step-title">Формат исходного файла</div>
+    </div>
+    <div class="formats-grid" id="formats-grid"></div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="step-label">
+      <div class="step-num">3</div>
+      <div class="step-title">Файл результата (фиксированный)</div>
+    </div>
+    <div class="output-row">
+      <svg class="lock-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <div class="static-path">%USERPROFILE%\Desktop\результат.md</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card">
+    <div class="result-header">
+      <div class="terminal-dots">
+        <span class="dot-r"></span>
+        <span class="dot-y"></span>
+        <span class="dot-g"></span>
+      </div>
+      <span class="result-label">cmd.exe</span>
+    </div>
+    <div class="result-body">
+      <div class="cmd-line" id="cmd-display">
+        <span class="p-empty">← введите имя файла и выберите формат</span>
+      </div>
+    </div>
+    <button class="copy-btn" id="copybtn" onclick="doCopy()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Копировать команду
+    </button>
+  </div>
+
+</div>
+
+<script>
+  const formats = [
+    { name: 'PDF',        ext: '.pdf',  emoji: '📄' },
+    { name: 'Word',       ext: '.docx', emoji: '📝' },
+    { name: 'Excel',      ext: '.xlsx', emoji: '📊' },
+    { name: 'PowerPoint', ext: '.pptx', emoji: '📑' },
+    { name: 'Картинка',   ext: '.jpg',  emoji: '🖼️' },
+    { name: 'PNG',        ext: '.png',  emoji: '🖼️' },
+    { name: 'CSV',        ext: '.csv',  emoji: '🗂️' },
+    { name: 'HTML',       ext: '.html', emoji: '🌐' },
+    { name: 'XML',        ext: '.xml',  emoji: '📋' },
+    { name: 'ZIP',        ext: '.zip',  emoji: '🗜️' },
+  ];
+
+  let selected = 0;
+
+  const grid = document.getElementById('formats-grid');
+  formats.forEach((f, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'fmt' + (i === 0 ? ' active' : '');
+    btn.innerHTML = `<span class="fmt-emoji">${f.emoji}</span><span class="fmt-name">${f.name}</span><span class="fmt-ext">${f.ext}</span>`;
+    btn.onclick = () => { selected = i; refresh(); render(); };
+    grid.appendChild(btn);
+  });
+
+  function refresh() {
+    grid.querySelectorAll('.fmt').forEach((b, i) => {
+      b.className = 'fmt' + (i === selected ? ' active' : '');
+    });
+    document.getElementById('ext-pill').textContent = formats[selected].ext;
+  }
+
+  function getCmd() {
+    const name = document.getElementById('fname').value.trim();
+    const ext  = formats[selected].ext;
+    if (!name) return '';
+    return `python -m markitdown "%USERPROFILE%\\Desktop\\${name}${ext}" -o "%USERPROFILE%\\Desktop\\результат.md"`;
+  }
+
+  function render() {
+    const name = document.getElementById('fname').value.trim();
+    const ext  = formats[selected].ext;
+    const el   = document.getElementById('cmd-display');
+    if (!name) {
+      el.innerHTML = '<span class="p-empty">← введите имя файла и выберите формат</span>';
+      return;
+    }
+    el.innerHTML =
+      `<span class="p-cmd">python -m markitdown</span> ` +
+      `"<span class="p-path">%USERPROFILE%\\Desktop\\</span><span class="p-file">${name}</span><span class="p-ext">${ext}</span>" ` +
+      `<span class="p-flag">-o</span> ` +
+      `"<span class="p-out">%USERPROFILE%\\Desktop\\результат.md</span>"`;
+  }
+
+  function doCopy() {
+    const cmd = getCmd();
+    if (!cmd) return;
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copybtn');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Скопировано!`;
+      btn.classList.add('ok');
+      setTimeout(() => {
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Копировать команду`;
+        btn.classList.remove('ok');
+      }, 2500);
+    });
+  }
+</script>
+</body>
+</html>
